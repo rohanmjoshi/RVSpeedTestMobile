@@ -1,34 +1,49 @@
 package com.amazon.rvspeedtest;
 
+import com.amazon.rvspeedtest.dto.RegistrationPOJO;
+import com.amazon.rvspeedtest.dto.RegistrationResponse;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.android.gms.maps.internal.m;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.TrafficStats;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.content.SharedPreferences;
+import android.widget.Toast;
 
 
 public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        mDisplay = (TextView)findViewById(R.id.display);
-        mContext = getApplicationContext();
+    setContentView(R.layout.activity_main);
+    mDisplay = (TextView)findViewById(R.id.display);
+    mContext = getApplicationContext();
+    mPinEditText = (EditText)findViewById(R.id.pin_edit_text);
+    performRegistrationCheck();
+}
 
+    private void performRegistrationCheck() {
         // Check device for Play Services APK. If check succeeds, proceed with GCM registration.
         if (checkPlayServices()) {
             mGCMInstance = GoogleCloudMessaging.getInstance(this);
@@ -39,7 +54,8 @@ public class MainActivity extends Activity {
             }
             else
             {
-                Log.i(TAG,"Registration id "+ mRegId);
+                Log.i(TAG, "Registration id " + mRegId);
+                mDisplay.setText(mRegId);
             }
         } else {
             Log.i(TAG, "No valid Google Play Services APK found.");
@@ -159,10 +175,6 @@ public class MainActivity extends Activity {
                     mRegId = mGCMInstance.register(SENDER_ID);
                     msg = "Device registered, registration ID=" + mRegId;
 
-                    // You should send the registration ID to your server over HTTP, so it
-                    // can use GCM/HTTP or CCS to send messages to your app.
-                    sendRegistrationIdToBackend();
-
                     // For this demo: we don't need to send it because the device will send
                     // upstream messages to a server that echo back the message using the
                     // 'from' address in the message.
@@ -207,13 +219,65 @@ public class MainActivity extends Activity {
         return getSharedPreferences(MainActivity.class.getSimpleName(),
                 Context.MODE_PRIVATE);
     }
+
+
+    // Button click events ------------------------------------------------------------------------
     /**
      * Sends the registration ID to your server over HTTP, so it can use GCM/HTTP or CCS to send
      * messages to your app. Not needed for this demo since the device sends upstream messages
      * to a server that echoes back the message using the 'from' address in the message.
      */
-    private void sendRegistrationIdToBackend() {
-        // Your implementation here.
+    public void submitButtonClicked(View view){
+        String pinTextString = mPinEditText.getText().toString();
+        if(isValid(pinTextString))
+        {
+            String regId = getRegistrationId(getApplicationContext());
+            RegistrationPOJO registrationPOJO = new RegistrationPOJO(regId,pinTextString);
+            RegistrationResponse response = new RegistrationResponse();
+            ServerUtil.SendToServer(registrationPOJO,response,REGISTRATION_URL);
+            if(!handleResponse(response))
+            {
+                ServerUtil.SendToServer(registrationPOJO,response,EC2_REGISTRATION_URL);
+            }
+        }
+        else
+        {
+            mPinEditText.setHint("Please enter valid PIN");
+        }
+    }
+
+    private boolean handleResponse(RegistrationResponse response) {
+        if(response == null)
+        {
+            Toast.makeText(this, "Got empty response. Could not contact server.", Toast.LENGTH_LONG).show();
+            return false;
+        }
+        if(response.error != null)
+        {
+            Toast.makeText(this,response.error,Toast.LENGTH_LONG).show();
+        }
+        else
+        {
+            //Toast.makeText(this,"Everything looks good.",Toast.LENGTH_LONG).show();
+        }
+
+        return true;
+    }
+
+    private boolean isValid(String string) {
+        return string!=null && string.length()>0;
+    }
+
+    private void testDownloadSpeed() {
+        new AsyncTask<Void,Void,Void>()
+        {
+
+            @Override
+            protected Void doInBackground(Void... params) {
+
+                return null;
+            }
+        }.execute(null,null,null);
     }
     public static final String EXTRA_MESSAGE = "message";
     public static final String PROPERTY_REG_ID = "registration_id";
@@ -224,6 +288,10 @@ public class MainActivity extends Activity {
     // AIzaSyBpDJsDuAaroobcxArYGIPzF9G5KudlAaA
 
     String SENDER_ID = "438294199175";
+    String BASE_URL = "http://10.0.2.2:8080/SpeedTestVoiceApp";
+    String EC2_BASE_URL = "https://speedtestvoiceapp-1878794768.us-west-2.elb.amazonaws.com/SpeedTestVoiceApp";
+    String REGISTRATION_URL = BASE_URL+"/registerDevice";
+    String EC2_REGISTRATION_URL = EC2_BASE_URL+"/registerDevice";
 
     /**
      * Tag used on log messages.
@@ -232,6 +300,7 @@ public class MainActivity extends Activity {
 
     // TextView mDisplay;
     TextView mDisplay;
+    EditText mPinEditText;
     GoogleCloudMessaging mGCMInstance;
    // AtomicInteger msgId = new AtomicInteger();
     Context mContext;

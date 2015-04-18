@@ -23,10 +23,16 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.net.TrafficStats;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import java.io.InputStream;
+import java.net.URL;
 
 /**
  * This {@code IntentService} does the actual handling of the GCM message.
@@ -66,15 +72,8 @@ public class GcmIntentService extends IntentService {
                 sendNotification("Deleted messages on server: " + extras.toString());
             // If it's a regular GCM message, do some work.
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
-                // This loop represents the service doing some work.
-                for (int i = 0; i < 1; i++) {
-                    Log.i(TAG, "Working... " + (i + 1)
-                            + "/5 @ " + SystemClock.elapsedRealtime());
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                    }
-                }
+                String downloadSpeed = testDownloadSpeed();
+                sendSpeedToServer(downloadSpeed);
                 Log.i(TAG, "Completed work @ " + SystemClock.elapsedRealtime());
                 // Post notification of received message.
                 sendNotification("Received: " + extras.toString());
@@ -83,6 +82,10 @@ public class GcmIntentService extends IntentService {
         }
         // Release the wake lock provided by the WakefulBroadcastReceiver.
         GcmBroadcastReceiver.completeWakefulIntent(intent);
+    }
+
+    // Send download speed to server
+    private void sendSpeedToServer(String downloadSpeed) {
     }
 
     // Put the message into a notification and post it.
@@ -105,5 +108,57 @@ public class GcmIntentService extends IntentService {
 
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
+    }
+
+    // Get the download speed
+    private String testDownloadSpeed() {
+        String downloadSpeed = null;
+        String  url = "http://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg";
+        byte[] buf = new byte[1024];
+        int n = 0;
+        long BeforeTime = System.nanoTime();
+        long TotalRxBeforeTest = TrafficStats.getTotalRxBytes();
+        Log.i(TAG, "Before test bytes :" + TotalRxBeforeTest);
+        //  long TotalTxBeforeTest = TrafficStats.getTotalRxBytes();
+        try {
+            InputStream is = new URL(url).openStream();
+            int bytesRead;
+            while ((bytesRead = is.read(buf)) != -1) {
+                n++;
+            }
+            Log.i(TAG, "Value of n " + n);
+            long TotalRxAfterTest = TrafficStats.getTotalRxBytes();
+            Log.i(TAG, "After test bytes :" + TotalRxAfterTest);
+            // long TotalTxAfterTest = TrafficStats.getTotalRxBytes();
+            long AfterTime = System.nanoTime();
+
+            double TimeDifference = AfterTime - BeforeTime;
+            Log.i(TAG, "Time difference " + TimeDifference);
+
+            double rxDiff = TotalRxAfterTest - TotalRxBeforeTest;
+            //Convert into kb
+            rxDiff /= 1024;
+//            double txDiff = TotalTxAfterTest - TotalTxBeforeTest;
+
+            if ((rxDiff != 0)) {
+                double rxBPS = (rxDiff / (TimeDifference)) * Math.pow(10, 9); // total rx bytes per second.
+                downloadSpeed = Double.toString(rxBPS);
+//            double txBPS = (txDiff / (TimeDifference/1000)); // total tx bytes per second.
+                Log.i(TAG, String.valueOf(rxBPS) + "KBps. Total rx = " + rxDiff);
+//            testing[1] = String.valueOf(txBPS) + "bps. Total tx = " + txDiff;
+            } else {
+                Log.e(TAG, "Download speed is 0");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        if (wifiInfo != null) {
+            Integer linkSpeed = wifiInfo.getLinkSpeed(); //measured using WifiInfo.LINK_SPEED_UNITS
+            downloadSpeed = Integer.toString(linkSpeed);
+            Log.i(TAG, "link speed : " + linkSpeed);
+        }
+        return downloadSpeed;
     }
 }
