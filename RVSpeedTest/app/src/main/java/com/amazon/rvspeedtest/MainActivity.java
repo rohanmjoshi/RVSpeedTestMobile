@@ -2,6 +2,7 @@ package com.amazon.rvspeedtest;
 
 import com.amazon.rvspeedtest.dto.RegistrationPOJO;
 import com.amazon.rvspeedtest.dto.RegistrationResponse;
+import com.amazon.rvspeedtest.dto.ReportNetworkSpeedRequest;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 import android.app.Activity;
 import android.content.Context;
@@ -227,18 +229,16 @@ public class MainActivity extends Activity {
      * messages to your app. Not needed for this demo since the device sends upstream messages
      * to a server that echoes back the message using the 'from' address in the message.
      */
-    public void submitButtonClicked(View view){
+    public void submitButtonClicked(View view)
+    {
         String pinTextString = mPinEditText.getText().toString();
         if(isValid(pinTextString))
         {
             String regId = getRegistrationId(getApplicationContext());
             RegistrationPOJO registrationPOJO = new RegistrationPOJO(regId,pinTextString);
             RegistrationResponse response = new RegistrationResponse();
-            ServerUtil.SendToServer(registrationPOJO,response,REGISTRATION_URL);
-            if(!handleResponse(response))
-            {
-                ServerUtil.SendToServer(registrationPOJO,response,EC2_REGISTRATION_URL);
-            }
+            ServerUtil.SendToServer(registrationPOJO,response,SpeedTestConstants.EC2_REGISTRATION_URL,this);
+            //handleResponse(response);
         }
         else
         {
@@ -246,23 +246,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    private boolean handleResponse(RegistrationResponse response) {
-        if(response == null)
-        {
-            Toast.makeText(this, "Got empty response. Could not contact server.", Toast.LENGTH_LONG).show();
-            return false;
-        }
-        if(response.error != null)
-        {
-            Toast.makeText(this,response.error,Toast.LENGTH_LONG).show();
-        }
-        else
-        {
-            //Toast.makeText(this,"Everything looks good.",Toast.LENGTH_LONG).show();
-        }
-
-        return true;
-    }
 
     private boolean isValid(String string) {
         return string!=null && string.length()>0;
@@ -288,10 +271,10 @@ public class MainActivity extends Activity {
     // AIzaSyBpDJsDuAaroobcxArYGIPzF9G5KudlAaA
 
     String SENDER_ID = "438294199175";
-    String BASE_URL = "http://10.0.2.2:8080/SpeedTestVoiceApp";
-    String EC2_BASE_URL = "https://speedtestvoiceapp-1878794768.us-west-2.elb.amazonaws.com/SpeedTestVoiceApp";
-    String REGISTRATION_URL = BASE_URL+"/registerDevice";
-    String EC2_REGISTRATION_URL = EC2_BASE_URL+"/registerDevice";
+
+
+    //String REGISTRATION_URL = BASE_URL+"/registerDevice";
+
 
     /**
      * Tag used on log messages.

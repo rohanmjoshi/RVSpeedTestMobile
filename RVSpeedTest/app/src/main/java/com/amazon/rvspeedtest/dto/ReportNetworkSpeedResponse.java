@@ -3,9 +3,9 @@ package com.amazon.rvspeedtest.dto;
 import java.io.Serializable;
 
 /**
- * Created by joshroha on 4/16/2015.
+ * Created by joshroha on 4/21/2015.
  */
-public class RegistrationResponse implements Serializable,ServerResponse {
+public class ReportNetworkSpeedResponse implements Serializable, ServerResponse {
     public String getError() {
         return error;
     }

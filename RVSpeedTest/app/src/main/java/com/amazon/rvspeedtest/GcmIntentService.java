@@ -16,6 +16,9 @@
 
 package com.amazon.rvspeedtest;
 
+import com.amazon.rvspeedtest.dto.RegistrationResponse;
+import com.amazon.rvspeedtest.dto.ReportNetworkSpeedRequest;
+import com.amazon.rvspeedtest.dto.ReportNetworkSpeedResponse;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 
 import android.app.IntentService;
@@ -30,6 +33,7 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -56,6 +60,8 @@ public class GcmIntentService extends IntentService {
         Log.i(TAG,"onHandleIntent called");
         Bundle extras = intent.getExtras();
         GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
+
+        String requestId = extras.getString("requestId");
         // The getMessageType() intent parameter must be the intent you received
         // in your BroadcastReceiver.
         String messageType = gcm.getMessageType(intent);
@@ -73,7 +79,7 @@ public class GcmIntentService extends IntentService {
             // If it's a regular GCM message, do some work.
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
                 String downloadSpeed = testDownloadSpeed();
-                sendSpeedToServer(downloadSpeed);
+                sendSpeedToServer(downloadSpeed, requestId);
                 Log.i(TAG, "Completed work @ " + SystemClock.elapsedRealtime());
                 // Post notification of received message.
                 sendNotification("Received: " + extras.toString());
@@ -85,7 +91,28 @@ public class GcmIntentService extends IntentService {
     }
 
     // Send download speed to server
-    private void sendSpeedToServer(String downloadSpeed) {
+    private void sendSpeedToServer(String downloadSpeed, String requestId) {
+        ReportNetworkSpeedRequest request = new ReportNetworkSpeedRequest(requestId,downloadSpeed);
+        ReportNetworkSpeedResponse response = new ReportNetworkSpeedResponse();
+        ServerUtil.SendToServer(request,response,SpeedTestConstants.EC2_SEND_SPEED_URL,this);
+//        handleResponse(response);
+    }
+
+    private void handleResponse(ReportNetworkSpeedResponse response) {
+        if(response == null)
+        {
+            Toast.makeText(this, "Got empty response.", Toast.LENGTH_LONG).show();
+            Log.e(TAG, "Got empty response. Could not contact server.");
+        }
+        if(response.error != null)
+        {
+            Toast.makeText(this,response.error,Toast.LENGTH_LONG).show();
+            Log.e(TAG,response.error);
+        }
+        else
+        {
+            Toast.makeText(this,"Everything looks good.",Toast.LENGTH_LONG).show();
+        }
     }
 
     // Put the message into a notification and post it.
@@ -113,45 +140,45 @@ public class GcmIntentService extends IntentService {
     // Get the download speed
     private String testDownloadSpeed() {
         String downloadSpeed = null;
-        String  url = "http://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg";
-        byte[] buf = new byte[1024];
-        int n = 0;
-        long BeforeTime = System.nanoTime();
-        long TotalRxBeforeTest = TrafficStats.getTotalRxBytes();
-        Log.i(TAG, "Before test bytes :" + TotalRxBeforeTest);
-        //  long TotalTxBeforeTest = TrafficStats.getTotalRxBytes();
-        try {
-            InputStream is = new URL(url).openStream();
-            int bytesRead;
-            while ((bytesRead = is.read(buf)) != -1) {
-                n++;
-            }
-            Log.i(TAG, "Value of n " + n);
-            long TotalRxAfterTest = TrafficStats.getTotalRxBytes();
-            Log.i(TAG, "After test bytes :" + TotalRxAfterTest);
-            // long TotalTxAfterTest = TrafficStats.getTotalRxBytes();
-            long AfterTime = System.nanoTime();
-
-            double TimeDifference = AfterTime - BeforeTime;
-            Log.i(TAG, "Time difference " + TimeDifference);
-
-            double rxDiff = TotalRxAfterTest - TotalRxBeforeTest;
-            //Convert into kb
-            rxDiff /= 1024;
-//            double txDiff = TotalTxAfterTest - TotalTxBeforeTest;
-
-            if ((rxDiff != 0)) {
-                double rxBPS = (rxDiff / (TimeDifference)) * Math.pow(10, 9); // total rx bytes per second.
-                downloadSpeed = Double.toString(rxBPS);
-//            double txBPS = (txDiff / (TimeDifference/1000)); // total tx bytes per second.
-                Log.i(TAG, String.valueOf(rxBPS) + "KBps. Total rx = " + rxDiff);
-//            testing[1] = String.valueOf(txBPS) + "bps. Total tx = " + txDiff;
-            } else {
-                Log.e(TAG, "Download speed is 0");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        String  url = "http://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg";
+//        byte[] buf = new byte[1024];
+//        int n = 0;
+//        long BeforeTime = System.nanoTime();
+//        long TotalRxBeforeTest = TrafficStats.getTotalRxBytes();
+//        Log.i(TAG, "Before test bytes :" + TotalRxBeforeTest);
+//        //  long TotalTxBeforeTest = TrafficStats.getTotalRxBytes();
+//        try {
+//            InputStream is = new URL(url).openStream();
+//            int bytesRead;
+//            while ((bytesRead = is.read(buf)) != -1) {
+//                n++;
+//            }
+//            Log.i(TAG, "Value of n " + n);
+//            long TotalRxAfterTest = TrafficStats.getTotalRxBytes();
+//            Log.i(TAG, "After test bytes :" + TotalRxAfterTest);
+//            // long TotalTxAfterTest = TrafficStats.getTotalRxBytes();
+//            long AfterTime = System.nanoTime();
+//
+//            double TimeDifference = AfterTime - BeforeTime;
+//            Log.i(TAG, "Time difference " + TimeDifference);
+//
+//            double rxDiff = TotalRxAfterTest - TotalRxBeforeTest;
+//            //Convert into kb
+//            rxDiff /= 1024;
+////            double txDiff = TotalTxAfterTest - TotalTxBeforeTest;
+//
+//            if ((rxDiff != 0)) {
+//                double rxBPS = (rxDiff / (TimeDifference)) * Math.pow(10, 9); // total rx bytes per second.
+//                downloadSpeed = Double.toString(rxBPS);
+////            double txBPS = (txDiff / (TimeDifference/1000)); // total tx bytes per second.
+//                Log.i(TAG, String.valueOf(rxBPS) + "KBps. Total rx = " + rxDiff);
+////            testing[1] = String.valueOf(txBPS) + "bps. Total tx = " + txDiff;
+//            } else {
+//                Log.e(TAG, "Download speed is 0");
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         WifiInfo wifiInfo = wifiManager.getConnectionInfo();
         if (wifiInfo != null) {
