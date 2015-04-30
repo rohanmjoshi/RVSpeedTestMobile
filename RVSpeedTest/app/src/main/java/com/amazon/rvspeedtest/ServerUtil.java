@@ -47,6 +47,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -78,7 +79,7 @@ public class ServerUtil {
                     Toast.makeText(context, response.getError(), Toast.LENGTH_LONG).show();
                     Log.e(TAG, response.getError());
                 } else {
-                    Toast.makeText(context, "Everything looks good.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(context, "You are registered!", Toast.LENGTH_LONG).show();
                 }
             }
 
@@ -104,9 +105,8 @@ public class ServerUtil {
             request.setEntity(params);
             HttpResponse response = httpClient.execute(request);
             String responseJSON = EntityUtils.toString(response.getEntity(), "UTF-8");
-            // dataToReceive = (T)gson.fromJson(responseJSON.trim(),dataToReceive.getClass());
-            dataToReceive.setError(responseJSON);
-            int i = 0;
+            HashMap<String,String> respnoseMap = (HashMap)gson.fromJson(responseJSON.trim(), HashMap.class);
+            dataToReceive.setError(respnoseMap.get("error"));
             //Not doing anything with the received data.
         } catch (Exception e) {
             e.printStackTrace();

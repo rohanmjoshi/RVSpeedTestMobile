@@ -22,17 +22,23 @@ import com.amazon.rvspeedtest.dto.ReportNetworkSpeedResponse;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 
 import android.app.IntentService;
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
+import android.media.RingtoneManager;
 import android.net.TrafficStats;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.io.InputStream;
@@ -47,17 +53,17 @@ import java.net.URL;
  */
 public class GcmIntentService extends IntentService {
     public static final int NOTIFICATION_ID = 1;
-    private NotificationManager mNotificationManager;
+    public static final String TAG = "GCM Demo";
     NotificationCompat.Builder builder;
+    private NotificationManager mNotificationManager;
 
     public GcmIntentService() {
         super("GcmIntentService");
     }
-    public static final String TAG = "GCM Demo";
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        Log.i(TAG,"onHandleIntent called");
+        Log.i(TAG, "onHandleIntent called");
         Bundle extras = intent.getExtras();
         GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
 
@@ -76,13 +82,15 @@ public class GcmIntentService extends IntentService {
                 sendNotification("Send error: " + extras.toString());
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_DELETED.equals(messageType)) {
                 sendNotification("Deleted messages on server: " + extras.toString());
-            // If it's a regular GCM message, do some work.
+                // If it's a regular GCM message, do some work.
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
-                String downloadSpeed = testDownloadSpeed();
-                sendSpeedToServer(downloadSpeed, requestId);
+                //String downloadSpeed = testDownloadSpeed();
+                //sendSpeedToServer(downloadSpeed, requestId);
+
+
                 Log.i(TAG, "Completed work @ " + SystemClock.elapsedRealtime());
                 // Post notification of received message.
-                sendNotification("Received: " + extras.toString());
+                sendNotification("Received message from Alexa PhoneFinder");
                 Log.i(TAG, "Received: " + extras.toString());
             }
         }
@@ -92,26 +100,22 @@ public class GcmIntentService extends IntentService {
 
     // Send download speed to server
     private void sendSpeedToServer(String downloadSpeed, String requestId) {
-        ReportNetworkSpeedRequest request = new ReportNetworkSpeedRequest(requestId,downloadSpeed);
+        ReportNetworkSpeedRequest request = new ReportNetworkSpeedRequest(requestId, downloadSpeed);
         ReportNetworkSpeedResponse response = new ReportNetworkSpeedResponse();
-        ServerUtil.SendToServer(request,response,SpeedTestConstants.EC2_SEND_SPEED_URL,this);
+        ServerUtil.SendToServer(request, response, SpeedTestConstants.EC2_SEND_SPEED_URL, this);
 //        handleResponse(response);
     }
 
     private void handleResponse(ReportNetworkSpeedResponse response) {
-        if(response == null)
-        {
+        if (response == null) {
             Toast.makeText(this, "Got empty response.", Toast.LENGTH_LONG).show();
             Log.e(TAG, "Got empty response. Could not contact server.");
         }
-        if(response.error != null)
-        {
-            Toast.makeText(this,response.error,Toast.LENGTH_LONG).show();
-            Log.e(TAG,response.error);
-        }
-        else
-        {
-            Toast.makeText(this,"Everything looks good.",Toast.LENGTH_LONG).show();
+        if (response.error != null) {
+            Toast.makeText(this, response.error, Toast.LENGTH_LONG).show();
+            Log.e(TAG, response.error);
+        } else {
+            Toast.makeText(this, "Everything looks good.", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -124,6 +128,8 @@ public class GcmIntentService extends IntentService {
 
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, MainActivity.class), 0);
+        Uri uriSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+
 
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
@@ -131,7 +137,9 @@ public class GcmIntentService extends IntentService {
                         .setContentTitle("GCM Notification")
                         .setStyle(new NotificationCompat.BigTextStyle()
                                 .bigText(msg))
-                        .setContentText(msg);
+                        .setContentText(msg).setSound(uriSound).setVibrate(new long[]{3000, 1000,
+                        3000, 1000, 3000, 1000, 3000}).setLights(Color.RED, 3000, 3000)
+                        .setCategory(Notification.CATEGORY_ALARM);
 
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
