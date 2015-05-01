@@ -1,5 +1,6 @@
 package com.amazon.rvspeedtest;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -59,6 +60,12 @@ import javax.net.ssl.X509TrustManager;
 public class ServerUtil {
     public static <T extends ServerResponse, S extends Serializable> void SendToServer(S dataToSend, final T dataToReceive, String stringURL, final Context context) {
         new AsyncTask<Object, Void, Void>() {
+        ProgressDialog pd;
+            @Override
+            protected void onPreExecute() {
+                pd = ProgressDialog.show(context,"Sending","",true);
+            }
+
             @Override
             protected Void doInBackground(Object... params) {
                 performNetworkActivity((S) params[0], (String) params[1], (T) params[2]);
@@ -67,6 +74,7 @@ public class ServerUtil {
 
             @Override
             protected void onPostExecute(Void aVoid) {
+                pd.cancel();
                 handleResponse(dataToReceive, context);
             }
 

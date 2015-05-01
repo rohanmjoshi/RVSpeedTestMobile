@@ -57,7 +57,6 @@ public class MainActivity extends Activity {
             else
             {
                 Log.i(TAG, "Registration id " + mRegId);
-                mDisplay.setText(mRegId);
             }
         } else {
             Log.i(TAG, "No valid Google Play Services APK found.");
@@ -194,7 +193,6 @@ public class MainActivity extends Activity {
 
             @Override
             protected void onPostExecute(String msg) {
-                mDisplay.append(msg + "\n");
             }
         }.execute(null, null, null);
     }
@@ -251,17 +249,7 @@ public class MainActivity extends Activity {
         return string!=null && string.length()>0;
     }
 
-    private void testDownloadSpeed() {
-        new AsyncTask<Void,Void,Void>()
-        {
 
-            @Override
-            protected Void doInBackground(Void... params) {
-
-                return null;
-            }
-        }.execute(null,null,null);
-    }
     public static final String EXTRA_MESSAGE = "message";
     public static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
