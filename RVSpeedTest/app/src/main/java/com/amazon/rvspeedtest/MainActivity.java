@@ -237,7 +237,7 @@ public class MainActivity extends Activity {
     // Server key
     // AIzaSyBpDJsDuAaroobcxArYGIPzF9G5KudlAaA
 
-    String SENDER_ID = "438294199175";
+    String SENDER_ID = "360023129197";
 
 
     //String REGISTRATION_URL = BASE_URL+"/registerDevice";

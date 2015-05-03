@@ -90,7 +90,7 @@ public class GcmIntentService extends IntentService {
 
                 Log.i(TAG, "Completed work @ " + SystemClock.elapsedRealtime());
                 // Post notification of received message.
-                sendNotification("Received message from Alexa PhoneFinder");
+                sendNotification("Received message from Alexa");
                 Log.i(TAG, "Received: " + extras.toString());
             }
         }
@@ -134,7 +134,7 @@ public class GcmIntentService extends IntentService {
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
                         .setSmallIcon(R.drawable.ic_stat_gcm)
-                        .setContentTitle("GCM Notification")
+                        .setContentTitle("Alexa Phone Finder")
                         .setStyle(new NotificationCompat.BigTextStyle()
                                 .bigText(msg))
                         .setContentText(msg).setSound(uriSound).setVibrate(new long[]{3000, 1000,
